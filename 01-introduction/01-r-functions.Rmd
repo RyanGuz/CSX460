@@ -30,6 +30,9 @@ f <- function(x) {
 x <- c(1,5,2,8)
 f(x)
 ```
+### Output
+
+[1] 80 16 40 10
 
 ## Exercise 2
 
@@ -67,3 +70,10 @@ f <- function(x) {
 x <- 1:20
 f(x)
 ```
+
+### Output
+
+ [1] "1"        "2"        "Fizz"     "4"        "Buzz"     "Fizz"     "7"        "8"       
+ [9] "Fizz"     "Buzz"     "11"       "Fizz"     "13"       "14"       "FizzBuzz" "16"      
+[17] "17"       "Fizz"     "19"       "Buzz"   
+
