@@ -30,8 +30,6 @@ f <- function(x) {
 x <- c(1,5,2,8)
 f(x)
 ```
-    
-
 
 ## Exercise 2
 
