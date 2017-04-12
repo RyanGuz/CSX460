@@ -1,7 +1,7 @@
 ---
 title: "Assingment NYC Flight Data"
-author: "Your Name Here"
-date: "October 5, 2016"
+author: "Ryan Guzalowski"
+date: "April 11, 2017"
 output: html_document
 ---
 
@@ -16,7 +16,6 @@ In the folder `02-fundamentals/data` there are four CSV files: `flights.csv`,
 `airports.csv`, `planes.csv` and `weather.csv`.  Join/merge these tables such 
 that there is one rectangular table with one row for each flight. 
 
-
 Put code in each of the sections provided.
 
 ## 1. Read Data
@@ -24,8 +23,12 @@ Put code in each of the sections provided.
 Using the `readr` package read the `flights` data.
 
 ```{r}
+library(readr)
+library(dplyr)
 
-
+# reading flights data from its csv file using package readr
+flights <- read_csv("data/flights.csv", col_types = cols())
+glimpse(flights)
 ```
 
 ## Numeric Variables  
@@ -33,6 +36,20 @@ Using the `readr` package read the `flights` data.
 Plot a histogram of arrival delays and departure delays 
 
 ```{r}
+
+#histogram for arrival delays
+hist(flights$arr_delay,
+     breaks = 100,
+     main = "Distribution of Flight Arrival Delay Times",
+     xlab = "Delay Time [min]",
+     xlim = c(-100, 300))
+
+#histogram for departure delays
+hist(flights$dep_delay,
+     breaks = 100,
+     main = "Distribution of Flight Departure Delay Times",
+     xlab = "Delay Time [min]",
+     xlim = c(-100, 300))
 
 ```
 
@@ -42,6 +59,17 @@ Plot a scatterplot of date vs arrival delay
 
 ```{r}
 
+#isolating data
+dates <- as.Date(flights$time_hour)
+arrivalDelay <- flights$arr_delay
+
+#scatter plot
+plot(arrivalDelay, dates,
+     main = "Flight Delays in 2013",
+     xlab = "Delay Time [min]",
+     ylab = "Date",
+     pch = 20,
+     cex = .05)
 ```
 
 
@@ -52,6 +80,12 @@ Create a `table`, counting the flights by origin airports and carrier.
 
 ```{r}
 
+# first group the data
+byOriginCarrier <- group_by(flights, origin, carrier)
+
+#then use summarise() to isolate grouped cols
+numFlts <- summarise(byOriginCarrier, count = n())
+glimpse(numFlts)
 
 ```
 
@@ -61,6 +95,20 @@ Create a `table`, counting the flights by origin airports and carrier.
 **Read** in the other data sets. Use methods to join the data together to create a single table containing one record per row.  (HINT: see `?data.table` or `?dplyr::join`)
 
 ```{r}
+
+#importing the other data tables
+airports <- read_csv("data/airports.csv", col_types = cols())
+weather <- read_csv("data/weather.csv", col_types = cols())
+planes <- read_csv("data/planes.csv", col_types = cols())
+
+#joining the tables together
+masterTable <- flights %>% select(year:time_hour)
+masterTable <- masterTable %>% left_join(planes, by = "tailnum")
+masterTable <- masterTable %>% left_join(airports, by = c("origin" = "faa"))
+masterTable <- masterTable %>% left_join(airports, by = c("dest" = "faa"),
+                                         suffix = c(".origin", ".dest"))
+masterTable <- masterTable %>% left_join(weather, by = c("month", "day", "origin", "hour"))
+glimpse(masterTable)
 
 ```
 
