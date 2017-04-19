@@ -1,12 +1,19 @@
 ---
 title: "NYCFlights: Arrival Delay Regression Model (Open Ended Variation)"
-author: "[Your Name]"
-date: "[Today's Date]"
+author: "Ryan Guzalowski"
+date: "4/18/2017"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(ggplot2)
+library(magrittr)
+library(lubridate)
+library(stringr)
+library(dplyr)
+library(data.table)
 ```
 
 # NYCFlights Model
@@ -17,19 +24,88 @@ Break the process down into steps and create a codeblock for each step.
  - Use as many steps you feel as necessary
  - Concisely explain each step 
  - Show all work
- 
-(You can start with the data that you created last week.)
 
 
-## Step 1: [Step Name] 
+## Step 1: Data Import 
 
-```{r "Step 1: [Step Name]" }
+```{r}
+
+# data.frame / dplyr
+flights  <- "data/flights.csv" %>% read_csv 
+# flights <- "data/flights.csv" %>% read.csv(stringsAsFactors=FALSE)
+planes   <- read_csv("data/planes.csv")
+airports <- read_csv("data/airports.csv") 
+weather  <- read_csv("data/weather.csv")
+
+# data.tables
+flightsDT  <- fread("data/flights.csv") 
+planesDT   <- fread("data/planes.csv")  %>% setkey(tailnum)
+airportsDT <- fread("data/airports.csv")  %>% setkey(faa) 
+weatherDT  <- fread("data/weather.csv") %>%   setkey(origin,year,month,day,hour)
+
+# BEST:
+YX <- flightsDT 
+YX %<>% merge( planesDT, all.x = TRUE, by='tailnum', suffixes=c('','.pl') )
+YX %<>% merge( weatherDT, all.x = TRUE, by=c('origin','year','month','day','hour'), suffixes=c('','.we') )
+YX %<>% merge( airportsDT, all.x = TRUE, by.x='origin', by.y='faa', suffixes=c('','.orig') )
+YX %<>% merge( airportsDT, all.x = TRUE, by.x='dest', by.y='faa', suffixes=c('','.dest') )
 
 ```
 
-## Step 2: ...
+## Step 2: Taking a sample of the data
+
+full dataset is too large to work with so here I take a random sample
+
+```{r}
+
+inds1 <- sample(1:nrow(YX), 100)
+
+resp <- YX$arr_delay
+respS <- resp[inds1]
+
+vars <- YX[, c("arr_delay", "dep_delay", "wind_speed", "wind_gust", "visib")]
+varsS <- vars[inds1]
+
+```
+
+# Step 3: Exploratory Data Analysis
+
+looking for simple correlations between datasets
+
+```{r}
+
+plot(varsS$dep_delay, respS,
+     xlab = "Departure Delay", ylab = "Arrival Delay")
+
+plot(varsS$wind_speed, respS,
+     xlab = "Wind Speed at Origin Airport", ylab = "Arrival Delay")
+
+plot(varsS$wind_speed, varsS$wind_gust,
+     xlab = "Wind Speed", ylab = "Wind Gust")
+
+plot(varsS$visib, respS,
+     xlab = "Visibility", ylab = "Arrival Delay")
 
 
+```
+
+# Step 4: Feature Generation
+
+It looks like departure delay is by far the best predictor for arrival delay. Isolating that predictor here and looking at a larger data set.
+
+```{r}
+inds2 <- sample(1:nrow(vars), 1000)
+
+respS <- log(resp[inds2])
+predS <- log(vars$dep_delay[inds2])
+
+plot(predS, respS,
+     xlab = "Departure Delay", ylab = "Arrival Delay")
+
+```
+# Step 5: Train Model
+
+For the naive model, I will use the mean of arrival delay. For the better model, I will train using the class of 2D linear functions.
 
 # Question:
 
