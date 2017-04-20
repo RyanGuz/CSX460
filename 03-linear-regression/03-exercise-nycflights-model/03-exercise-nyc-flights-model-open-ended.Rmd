@@ -58,7 +58,7 @@ full dataset is too large to work with so here I take a random sample
 
 ```{r}
 
-inds1 <- sample(1:nrow(YX), 100)
+inds1 <- sample(1:nrow(YX), 1000)
 
 resp <- YX$arr_delay
 respS <- resp[inds1]
@@ -91,23 +91,112 @@ plot(varsS$visib, respS,
 
 # Step 4: Feature Generation
 
-It looks like departure delay is by far the best predictor for arrival delay. Isolating that predictor here and looking at a larger data set.
+It looks like departure delay is by far the best predictor for arrival delay. Isolating that predictor here and looking at a larger data set. Also log transforming data to help remove skew.
 
 ```{r}
 inds2 <- sample(1:nrow(vars), 1000)
 
-respS <- log(resp[inds2])
-predS <- log(vars$dep_delay[inds2])
+respS <- resp[inds2]
+predS <- vars$dep_delay[inds2]
 
-plot(predS, respS,
-     xlab = "Departure Delay", ylab = "Arrival Delay")
+notNA <- !is.na(respS) & !is.na(predS)
+respS <- respS[notNA]
+predS <- predS[notNA]
+
+#added 30 to handle negative values with log transf. Almost all flights will not leave more than 30 min early
+predSln <- log(predS+30)
+
+plot(predSln, respS,
+     xlab = "ln(Departure Delay + 30) [ln(min)]", ylab = "Arrival Delay")
+
+hist(predSln, breaks = 20,
+     main = "Transformed Departure Delay Data",
+     xlab = "ln(Departure Delay + 30) [ln(min)]", ylab = "Arrival Delay")
 
 ```
+
 # Step 5: Train Model
 
-For the naive model, I will use the mean of arrival delay. For the better model, I will train using the class of 2D linear functions.
+For the naive model, I will use the mean of arrival delay. For the better model, I will fit a quadratic poly regression.
+
+Naive model has RMSE of 41, while quadratic fit has a RMSE of 18.
+
+```{r}
+
+#naive model
+aveResp <- mean(respS, na.rm=TRUE)
+naiveM <- rep(1,length(respS))*aveResp
+naiveRMSE <- sqrt(mean((naiveM-respS)^2))
+
+
+#quadratic fit
+y = respS
+x = predSln
+
+model <- lm(y ~ poly(x, 2, raw=TRUE))
+xx = seq(min(predSln), max(predSln), .01)
+yy <- predict(model, data.frame(x=xx))
+yhat <- predict(model, data.frame(x=x))
+
+modelRMSE <- sqrt(mean((yhat-y)^2))
+
+plot(predSln, respS,
+     xlab = "ln(Departure Delay + 30) [ln(min)]",
+     ylab = "Arrival Delay",
+     main = "Naive Model and Quadratic Fit compared to Data")
+lines(xx, yy, col = "red", lwd=2)
+lines(xx, aveResp*rep(1,length(xx)), col = "blue", lwd=2)
+legend(3,250, c("Data", "Naive Model", "Best Quadratic Fit"),
+       pch=c(1,NA,NA), lty=c(NA,1,1), col = c("black", "blue", "red"))
+
+```
+
+# Step 6: Validate Model
+
+Here i look at my model with a new random sample of data.
+RMSE of sample of new data is 19. Increased slightly but still a vast improvement over naive model.
+
+```{r}
+inds3 <- sample(1:nrow(vars), 2000)
+
+respV <- resp[inds3]
+predVln <- log(vars$dep_delay[inds3]+30)
+notNA <- !is.na(respV) & !is.na(predVln)
+respV <- respV[notNA]
+predVln <- predVln[notNA]
+
+
+x <- predVln
+y <- respV
+xx = seq(min(predVln), max(predVln), .01)
+yy <- predict(model, data.frame(x=xx))
+yhat <- predict(model, data.frame(x=x))
+validateRMSE <- sqrt(mean((yhat-y)^2))
+
+plot(predVln, respV,
+     xlab = "ln(Departure Delay + 30) [ln(min)]",
+     ylab = "Arrival Delay",
+     main = "Naive Model and Quadratic Fit compared to Data")
+lines(xx, yy, col = "red", lwd=2)
+lines(xx, aveResp*rep(1,length(xx)), col = "blue", lwd=2)
+legend(3,max(y)*.75, c("Data", "Naive Model", "Best Quadratic Fit"),
+       pch=c(1,NA,NA), lty=c(NA,1,1), col = c("black", "blue", "red"))
+
+```
+
+
 
 # Question:
 
-Is this a good model?  (Write your answer here.)
+Final model:
 
+$$
+ArrivalDelay = 39*ln(DepartureDelay+30)^2 - 244*ln(DepartureDelay+30) + 373
+$$
+
+
+This model provides a ~50% improvement over the naive model when comparing RMSE values. The model breaks down at the extremes of arrival delay. It predicts that arrival delay will increase with decreasing departure delay at the extreme of smallest departure delays, which does not make intuitive sense. Additionaly, it underpredicts arrival delay at the other extreme of the largest departure delays in the data.
+
+```{r}
+summary(model)
+```
