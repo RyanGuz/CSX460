@@ -1,12 +1,37 @@
 ---
 title: "NYCFlights: Arrival Delay Logictic Model"
-author: "[Your Name]"
-date: "[Today's Date]"
+author: "Ryan Guzalowski"
+date: "5/2/17"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(magrittr)
+library(lubridate)
+library(stringr)
+library(data.table)
+
+flights <- read_csv("data/flights.csv")
+planes   <- read_csv("data/planes.csv")
+airports <- read_csv("data/airports.csv") 
+weather  <- read_csv("data/weather.csv")
+
+flightsDT  <- fread("data/flights.csv") 
+planesDT   <- fread("data/planes.csv")  %>% setkey(tailnum)
+airportsDT <- fread("data/airports.csv")  %>% setkey(faa) 
+weatherDT  <- fread("data/weather.csv") %>%   setkey(origin,year,month,day,hour)
+
+YX <- flightsDT 
+YX %<>% merge( planesDT, all.x = TRUE, by='tailnum', suffixes=c('','.pl') )
+YX %<>% merge( weatherDT, all.x = TRUE, by=c('origin','year','month','day','hour'), suffixes=c('','.we') )
+YX %<>% merge( airportsDT, all.x = TRUE, by.x='origin', by.y='faa', suffixes=c('','.orig') )
+YX %<>% merge( airportsDT, all.x = TRUE, by.x='dest', by.y='faa', suffixes=c('','.dest') )
+
 ```
 
 
@@ -20,19 +45,63 @@ knitr::opts_chunk$set(echo = TRUE)
 
 - Plot the Inverse Logistic function from `[0,1]`
 
-
 **Hint:** For plotting curves see `?graphics::curve` or `?ggplot2::stat_function`
 
 ```{r "Logistic and Inverse Logistic" }
+
+lf <- function(x) {
+  return (1/(1+exp(-x)))
+}
+
+p1 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x))
+p1 + stat_function(fun = lf) + xlim(-10,10) + annotate("text", x = -5, y = .75, label = "1/(1+exp(-x))", size = 10)
+
+lfinv <- function(y) {
+  return (-log((1-y)/y))
+}
+
+p2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x))
+p2 + stat_function(fun = lfinv) + xlim(0,1) + annotate("text", x = .2, y = 2.5, label = "ln(x/(1-x))", size = 10)
+
+# Testing that they are invereses. Input == output
+test <- c(.1, .2, .4, .7, .9)
+test %>% lfun() %>% ilfun() %>% print()
 
 ```
 
 
 # NYCFlights Model
 
-Using the rectangular data that you created from the earlier assignment and following theexample from the text and class, create a model for arr_delay >= 22 minutes. Describe/Explain each of the steps and show all work.
+Using the rectangular data that you created from the earlier assignment and following the example from the text and class, create a model for arr_delay >= 22 minutes. Describe/Explain each of the steps and show all work.
 
 KNIT YOUR DOCUMENT AS *HTML* AND SUBMIT IT AND THE `Rmd` file to your repository.   
+
+```{r}
+
+yx <- YX %>% sample_n(10000)
+
+y <- "arr_delay"
+xs <- c('month', 'dep_delay', 'carrier', 'air_time'
+        ,'distance', 'year.pl', 'type', 'engine'
+        ,'wind_dir', 'wind_speed', 'wind_gust', 'precip'
+        ,'pressure', 'visib', 'lat', 'lon'
+        ,'lat.dest', 'lon.dest')
+
+yx <- yx[, c(y,xs), with = FALSE]
+yx %>% sapply( . %>% is.na %>% sum )
+
+yx$arr_delay[yx$arr_delay < 22] <- 0
+yx$arr_delay[yx$arr_delay >= 22] <- 1
+
+fit1 <- glm(arr_delay ~ dep_delay, family=binomial(link='logit'), data=yx)
+summary(fit1)
+
+fit2 <- glm(arr_delay ~ ., family=binomial(link='logit'), data=yx)
+summary(fit2)
+
+```
+
+
 
 
 # Question:
