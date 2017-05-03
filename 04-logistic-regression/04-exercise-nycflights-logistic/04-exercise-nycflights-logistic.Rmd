@@ -65,51 +65,87 @@ p2 + stat_function(fun = lfinv) + xlim(0,1) + annotate("text", x = .2, y = 2.5, 
 
 # Testing that they are invereses. Input == output
 test <- c(.1, .2, .4, .7, .9)
-test %>% lfun() %>% ilfun() %>% print()
+test %>% lf() %>% lfinv() %>% print()
 
 ```
 
 
-# NYCFlights Model
+# PART A:
 
 Using the rectangular data that you created from the earlier assignment and following the example from the text and class, create a model for arr_delay >= 22 minutes. Describe/Explain each of the steps and show all work.
 
 KNIT YOUR DOCUMENT AS *HTML* AND SUBMIT IT AND THE `Rmd` file to your repository.   
 
-```{r}
+```{r, run}
 
+# reducing sample size, choosing predictors
 yx <- YX %>% sample_n(10000)
-
 y <- "arr_delay"
 xs <- c('month', 'dep_delay', 'carrier', 'air_time'
         ,'distance', 'year.pl', 'type', 'engine'
         ,'wind_dir', 'wind_speed', 'wind_gust', 'precip'
         ,'pressure', 'visib', 'lat', 'lon'
         ,'lat.dest', 'lon.dest')
-
 yx <- yx[, c(y,xs), with = FALSE]
-yx %>% sapply( . %>% is.na %>% sum )
 
+# setting up arrival delay to be factor of 0 (<22min) or 1 (>=22 min)
+# r uses second factor to try and fit, so we make (>=22 min) == 1
 yx$arr_delay[yx$arr_delay < 22] <- 0
 yx$arr_delay[yx$arr_delay >= 22] <- 1
+yx$arr_delay <- factor(yx$arr_delay)
+levels(yx$arr_delay)
 
-fit1 <- glm(arr_delay ~ dep_delay, family=binomial(link='logit'), data=yx)
+# training simple model
+fit1 <- glm(arr_delay ~ dep_delay, family=binomial, data=yx)
 summary(fit1)
 
-fit2 <- glm(arr_delay ~ ., family=binomial(link='logit'), data=yx)
+# training model with all predictors included
+fit2 <- glm(arr_delay ~ ., family=binomial, data=yx)
 summary(fit2)
 
 ```
 
 
+# Question A:
 
+Is this a good model?
 
-# Question:
-
-Is this a good model?  (Write your answer here.)
-
+AIC went from 4300 in the model with only the dep_delay (simple model) to 2520 using
+all the predictors, so it is an improvement.
 
 # PART B:
 
 Your model should be good at explaining tardiness. Now, assume that your job is to predict arrival delays a month in advance. You can no longer use all the features in your model. Retrain your model using only features that will be *known* only a month in advance of the departure time.  Show all steps as above.
 
+```{r}
+
+# make the training set. choosing predictors that we would know only in advance
+yx <- YX %>% sample_n(10000)
+y <- "arr_delay"
+xs <- c("origin", "month", "day", "hour", "sched_dep_time", "sched_arr_time",
+        "carrier", "air_time", "distance", "type", "engines", "seats",
+        "lat.dest", "lon.dest", "alt.dest")
+yxb <- yx[, c(y,xs), with = FALSE]
+
+# Set up arrival delay specifications
+yxb$arr_delay[yxb$arr_delay < 22] <- 0
+yxb$arr_delay[yxb$arr_delay >= 22] <- 1
+yxb$arr_delay <- factor(yxb$arr_delay)
+levels(yxb$arr_delay)
+
+# training simple model
+fitb1 <- glm(arr_delay ~ air_time, data = yxb, family = "binomial")
+summary(fitb1)
+
+# training model with all predictors
+fitb2 <- glm(arr_delay ~ ., data = yxb, family = "binomial")
+summary(fitb2)
+
+```
+
+
+# Question B:
+
+Is this a good model?
+
+AIC is now 7400, much worse than when we had the day-of information. It is a improvement over the simple model of using only air_time though, which gave an AIC of 9600.
