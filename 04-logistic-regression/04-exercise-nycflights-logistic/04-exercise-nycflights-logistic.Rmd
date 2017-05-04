@@ -99,9 +99,15 @@ levels(yx$arr_delay)
 fit1 <- glm(arr_delay ~ dep_delay, family=binomial, data=yx)
 summary(fit1)
 
+plot(yx$dep_delay, as.numeric(yx$arr_delay)-1,
+     main = "Only using dep_delay as Predictor")
+curve(predict(fit1,data.frame(dep_delay=x),type="resp"),add=TRUE)
+
+
 # training model with all predictors included
 fit2 <- glm(arr_delay ~ ., family=binomial, data=yx)
 summary(fit2)
+
 
 ```
 
@@ -137,9 +143,15 @@ levels(yxb$arr_delay)
 fitb1 <- glm(arr_delay ~ air_time, data = yxb, family = "binomial")
 summary(fitb1)
 
+plot(yxb$air_time, as.numeric(yxb$arr_delay)-1,
+     main = "Using only air_time as predictor")
+curve(predict(fitb1, data.frame(air_time=x),type="resp"),add=TRUE)
+
 # training model with all predictors
 fitb2 <- glm(arr_delay ~ ., data = yxb, family = "binomial")
 summary(fitb2)
+
+
 
 ```
 
@@ -148,4 +160,4 @@ summary(fitb2)
 
 Is this a good model?
 
-AIC is now 7400, much worse than when we had the day-of information. It is a improvement over the simple model of using only air_time though, which gave an AIC of 9600.
+AIC is now 7400, much worse than when we had the day-of information. It is a improvement over the simple model of using only air_time though, which gave an AIC of 9600. As shown by the graph though, even the most statistically significant predictor fails to obviously show a trend
