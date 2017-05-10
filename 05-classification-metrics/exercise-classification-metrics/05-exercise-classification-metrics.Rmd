@@ -1,10 +1,9 @@
 ---
-title: "Classification Mettrics"
+title: "Classification Metrics"
 author: "Ryan Guzalowski"
 date: "May 9, 2017"
 output: html_document
 ---
-
 
 **KNIT YOUR DOCUMENT AS *HTML* AND SUBMIT IT AND THE `Rmd` file.** 
  
@@ -29,31 +28,27 @@ Write functions of `y` and `y_hat` to calculate the following classification met
 
 library(dplyr)
 
-test1 <- c(rep(1,10), rep(0,10)) %>% sample(size=20)
-test2 <- c(rep(1,10), rep(0,10)) %>% sample(size=20)
-
-
 TPR <- function(y, yhat) {
-  truePos <- yhat[y == 1 & yhat == 1] %>% length()
-  obsPos <- y[y == 1] %>% length()
+  truePos <- yhat[y == TRUE & yhat == TRUE] %>% length()
+  obsPos <- y[y == TRUE] %>% length()
   return(truePos/obsPos)
 }
 
 FPR <- function(y, yhat) {
-  falsePos <- yhat[yhat == 1 & y == 0] %>% length()
-  obsNeg <- y[y == 0] %>% length()
+  falsePos <- yhat[yhat == TRUE & y == FALSE] %>% length()
+  obsNeg <- y[y == FALSE] %>% length()
   return(falsePos/obsNeg)
 }
 
 TNR <- function(y, yhat) {
-  trueNeg <- yhat[y == 0 & yhat == 0] %>% length()
-  obsNeg <- y[y == 0] %>% length()
+  trueNeg <- yhat[y == FALSE & yhat == FALSE] %>% length()
+  obsNeg <- y[y == FALSE] %>% length()
   return(trueNeg/obsNeg)
 }
 
 FNR <- function(y, yhat) {
-  falseNeg <- yhat[yhat == 0, y == 1] %>% length()
-  obsPos <- y[y == 1] %>% length()
+  falseNeg <- yhat[yhat == FALSE & y == TRUE] %>% length()
+  obsPos <- y[y == TRUE] %>% length()
   return(falseNeg/obsPos)
 }
 
@@ -70,20 +65,20 @@ recall <- function(y, yhat) {
 }
 
 precision <- function(y, yhat) {
-  truePos <- yhat[y == 1 & yhat == 1] %>% length()
-  predictedPos <- yhat[y==1] %>% length()
+  truePos <- yhat[y == TRUE & yhat == TRUE] %>% length()
+  predictedPos <- yhat[y==TRUE] %>% length()
   return(truePos/predictedPos)
 }
 
 prevalence <- function(y, yhat) {
-  actualPos <- y[y == 1] %>% length()
+  actualPos <- y[y == TRUE] %>% length()
   total <- length(y)
   return(actualPos/total)
 }
 
 accuracy <- function(y, yhat) {
-  truePos <- yhat[y == 1 & yhat == 1] %>% length()
-  trueNeg <- yhat[y == 0 & yhat == 0] %>% length()
+  truePos <- yhat[y == TRUE & yhat == TRUE] %>% length()
+  trueNeg <- yhat[y == FALSE & yhat == FALSE] %>% length()
   total <- length(y)
   return((truePos+trueNeg)/total)
 }
@@ -92,14 +87,28 @@ kappa <- function(y, yhat) {
   
   po <- accuracy(y, yhat)
 
-  TP <- yhat[y == 1 & yhat == 1] %>% length()
-  FN <- yhat[yhat == 0, y == 1] %>% length()
-  TN <- yhat[y == 0 & yhat == 0] %>% length()
-  FP <- yhat[yhat == 1 & y == 0] %>% length()
+  n <- length(y)
+  TP <- yhat[y == TRUE & yhat == TRUE] %>% length()
+  FN <- yhat[yhat == FALSE & y == TRUE] %>% length()
+  TN <- yhat[y == FALSE & yhat == FALSE] %>% length()
+  FP <- yhat[yhat == TRUE & y == FALSE] %>% length()
   
+  pT <- (TP+FN)/n * (TP+FP)/n
+  pF <- (FP+TN)/n * (FN+TN)/n
   
+  pe <- pT+pF
+  
+  return((po-pe)/(1-pe))
 }
 
+
+funs <- list(TPR, FPR, TNR, FNR, sensitivity, specificity, recall, precision,
+             prevalence, accuracy, kappa)
+
+funNames <- list("True Positive Rate", "False Positive Rate",
+                 "True Negative Rate", "False Negative Rate",
+                 "Sensitivity", "Specificity", "Recall", "Precision",
+                 "Prevalence", "Accuracy", "Kappa")
 
 ```
 
@@ -111,6 +120,12 @@ you created last week.
 
 ```{r "evaluations"}
 
+logitModel <- readRDS( "logitModel.rds")
+y <- logitModel$y
+yhat <- logitModel$yhat
+
+for (i in 1:length(funs)) {
+  print(paste(funNames[[i]], ":", funs[[i]](y,yhat) %>% round(digits=2)))
+}
 
 ```
-
