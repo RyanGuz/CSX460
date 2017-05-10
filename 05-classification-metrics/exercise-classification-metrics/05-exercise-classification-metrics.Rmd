@@ -1,7 +1,7 @@
 ---
 title: "Classification Mettrics"
-author: "Christopher Brown"
-date: "October 5, 2015"
+author: "Ryan Guzalowski"
+date: "May 9, 2017"
 output: html_document
 ---
 
@@ -25,12 +25,83 @@ Write functions of `y` and `y_hat` to calculate the following classification met
 * Accuracy
 * Kappa
 
-```{r "definitions", echo=FALSE}
+```{r "definitions"}
+
+library(dplyr)
+
+test1 <- c(rep(1,10), rep(0,10)) %>% sample(size=20)
+test2 <- c(rep(1,10), rep(0,10)) %>% sample(size=20)
+
+
+TPR <- function(y, yhat) {
+  truePos <- yhat[y == 1 & yhat == 1] %>% length()
+  obsPos <- y[y == 1] %>% length()
+  return(truePos/obsPos)
+}
+
+FPR <- function(y, yhat) {
+  falsePos <- yhat[yhat == 1 & y == 0] %>% length()
+  obsNeg <- y[y == 0] %>% length()
+  return(falsePos/obsNeg)
+}
+
+TNR <- function(y, yhat) {
+  trueNeg <- yhat[y == 0 & yhat == 0] %>% length()
+  obsNeg <- y[y == 0] %>% length()
+  return(trueNeg/obsNeg)
+}
+
+FNR <- function(y, yhat) {
+  falseNeg <- yhat[yhat == 0, y == 1] %>% length()
+  obsPos <- y[y == 1] %>% length()
+  return(falseNeg/obsPos)
+}
+
+sensitivity <- function(y, yhat) {
+  return(TPR(y, yhat))
+}
+
+specificity <- function(y, yhat) {
+  return(TNR(y, yhat))
+}
+
+recall <- function(y, yhat) {
+  return(TPR(y, yhat))
+}
+
+precision <- function(y, yhat) {
+  truePos <- yhat[y == 1 & yhat == 1] %>% length()
+  predictedPos <- yhat[y==1] %>% length()
+  return(truePos/predictedPos)
+}
+
+prevalence <- function(y, yhat) {
+  actualPos <- y[y == 1] %>% length()
+  total <- length(y)
+  return(actualPos/total)
+}
+
+accuracy <- function(y, yhat) {
+  truePos <- yhat[y == 1 & yhat == 1] %>% length()
+  trueNeg <- yhat[y == 0 & yhat == 0] %>% length()
+  total <- length(y)
+  return((truePos+trueNeg)/total)
+}
+
+kappa <- function(y, yhat) {
+  
+  po <- accuracy(y, yhat)
+
+  TP <- yhat[y == 1 & yhat == 1] %>% length()
+  FN <- yhat[yhat == 0, y == 1] %>% length()
+  TN <- yhat[y == 0 & yhat == 0] %>% length()
+  FP <- yhat[yhat == 1 & y == 0] %>% length()
+  
+  
+}
 
 
 ```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 
 ## Usage 

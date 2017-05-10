@@ -1,7 +1,7 @@
 ---
 title: "Resampling"
-author: "Your Name Here"
-date: "October 5, 2015"
+author: "Ryan Guzalowski"
+date: "May 9, 2017"
 output: html_document
 ---
 
@@ -15,17 +15,62 @@ output: html_document
 - Calculte the `sd( mean(x) )` using the **using 10-fold resampling**.  Create your own folds, show your work.
 - Calculte the `sd( mean(x) )` using the **using 10 bootstrap sample**.  Create your own folds, show your work. 
 
-```{r}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(data.table)
+library(dplyr)
+```
+
+### 10 FOLD:
+```{r "sd_cv"}
 set.seed(1) 
 x <- runif(20,1,20)
 
-sd_cv # <- Your work here 
+# 10 Fold resampleing fun
+sd_cv <- function(x) {
+  
+  n <- length(x)
+  foldSize <- n/10
+  
+  start <- 1
+  end <- foldSize
+  means <- rep(0, 10) #init
+  for (i in 1:10) {
+    means[i] <- x[-(start:end)] %>% mean() #takes out fold and gets mean of sample
+    start <- start + foldSize #primes indicies for next round
+    end <- end + foldSize
+  }
+  
+  return (sd(means)) #returns sd of all means collected
+}
 
-sd_boot # <- Your work here
+print(paste("10 FOLD ::: Mean:", x %>% mean() %>% round(digits=2), ",",
+            "SD:", sd_cv(x) %>% round(digits=2)))
+
 ```
 
 
-### Your answers here: 
+### 10 BOOTSTRAP:
+```{r "sd_boot"}
 
-- sd_cv   is: `r sd_cv`
-- sd_boot is: `r sd_boot`
+sd_boot <- function(x) {
+  
+  n <- length(x)
+  
+  means <- rep(0, 10) #init
+  for (i in 1:10) {
+    bootStrap <- base::sample(x, n, replace=TRUE) #samples with replacement
+    means[i] <- bootStrap %>% mean()
+  }
+  
+  return (sd(means)) #returns sd of all means collected
+}
+
+
+print(paste("10 BOOTSTRAP ::: Mean:", x %>% mean() %>% round(digits=2), ",",
+            "SD:", sd_boot(x) %>% round(digits=2)))
+```
+
+
+
