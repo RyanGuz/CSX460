@@ -27,6 +27,8 @@ YX %<>% merge( airportsDT, all.x = TRUE, by.x='dest', by.y='faa', suffixes=c('',
 
 YX <- YX[ , late := factor(arr_delay >= 22) ]
 
+saveRDS(YX, file = "YX.rds")
+
 yx <- copy(YX)
 
 form <- 

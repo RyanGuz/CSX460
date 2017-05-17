@@ -1,13 +1,17 @@
 ---
 title: "Caret / Recursive Partitioning"
-author: "Your Name Here"
-date: "Today's Date"
-output: pdf_document
+author: "Ryan Guzalowski"
+date: "5/16/17"
+output: html_document
 ---
 
 ```{r init, warning=FALSE, echo=FALSE, message=FALSE}
 library(rpart)
 library(caret)
+library(dplyr)
+library(data.table)
+library(pROC)
+library(plyr)
 # .. Additional libraries
 ```
 
@@ -23,7 +27,35 @@ Rebuild your logistic regression model from the previous week, this time using t
 Show all work.
 
 ```{r logistic model}
-# Your Work Here
+
+YX <- readRDS( "YX.rds")
+predictors <- c("dep_delay", "month", "air_time", "distance", "carrier", "lat.dest", "lon.dest")
+response <- c("late")
+yx <- subset(YX, select = c(response, predictors)) %>% sample_n(1000) %>% na.omit()
+yx$carrier <- yx$carrier %>% as.factor()
+yx$late <- yx$late %>% as.character()
+yx$late[yx$late=="TRUE"] <- "late"
+yx$late[yx$late=="FALSE"] <- "notLate"
+yx$late <- yx$late %>% as.factor()
+form <- late ~ dep_delay + month + air_time + distance + carrier + lat.dest + lon.dest
+
+ctrlLD <- trainControl(method = "cv", number = 10,
+                       savePredictions = TRUE,
+                       classProbs = TRUE)
+
+fitLD <- train(form, data = yx,
+               method = "glm", family = "binomial",
+               trControl = ctrlLD,
+               na.action = na.omit)
+
+# Accuracy here after cross validation gives unbiased measure of performance
+summary(fitLD)
+
+y <- fitLD$pred$obs
+yhat <- fitLD$pred$late
+rocCurve <- roc(y, yhat)
+
+plot(rocCurve, main = "ROC Predicting Flight Delay")
 ```
 
 
@@ -38,16 +70,46 @@ Using the `caret` and `rpart` packages, create a **classification** model for fl
 - A plot of your model -- (the actual tree; there are several ways to do this)
 - A discussion of your model 
 
-
-
 Show and describe all work
 
+# ARTICULATION OF THE PROBLEM:
+We are trying to predict if a flight will be late or not. Classification tree
+splits the predictors at intelligent places so that at any end node of the
+decision tree you can determine if the flight is late or not.
+
 ```{r rpart model}
-# Your Work Here
+
+#NAIVE MODEL:
+# if flight dep_delay is >20 min, then arrival delay will be <20 min
+
+
+
+
+# USE OF CARET/RPART TO TRAIN MODEL
+ctrlCART <- trainControl(method = "cv", number = 10,
+                         savePredictions = TRUE,
+                         classProbs = TRUE)
+fitCART <- train(form, data = yx,
+                method = "rpart",
+                trControl = ctrlCART)
+
+# 10 FOLD CROSS VALIDATION GIVES UNBIASED PERF. METRIC. ACCURACY GIVEN BELOW
+summary(fitCART)
+
 ```
+
+```{r plot, fig.height=10, fig.width=19}
+
+# PLOT OF THE MODEL
+plot(fitCART$finalModel)
+text(fitCART$finalModel, cex = 5)
+
+```
+
+DISCUSSION OF MODEL:
+
 
 
 ### Questions:
-
 - Discuss the difference between the models and why you would use one model over the other?
 - How might you produce an ROC type curve for the *rpart* model? 
