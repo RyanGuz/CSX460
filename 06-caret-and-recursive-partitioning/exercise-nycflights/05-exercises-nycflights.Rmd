@@ -12,6 +12,8 @@ library(dplyr)
 library(data.table)
 library(pROC)
 library(plyr)
+library(rpart.plot)
+
 # .. Additional libraries
 ```
 
@@ -48,14 +50,25 @@ fitLD <- train(form, data = yx,
                trControl = ctrlLD,
                na.action = na.omit)
 
-# Accuracy here after cross validation gives unbiased measure of performance
+### APPARENT PERFORMANCE ###
+y_app <- yx$late
+yhat_app <- predict(fitLD, data = yx)
+accuracy_app <- sum(y_app == yhat_app)/length(y_app)
+print(paste("Apparent accuracy of GLM fit: ", accuracy_app %>% round(4)))
+
+### UNBIASED MEASURE OF PERFORMANCE ###
+# uses 10 fold cross validation
 summary(fitLD)
+print(fitLD)
+accuracy_cv <- fitLD$results$Accuracy
+print(paste("Unbiased accuracy of GLM fit: ", accuracy_cv %>% round(4)))
 
-y <- fitLD$pred$obs
-yhat <- fitLD$pred$late
-rocCurve <- roc(y, yhat)
-
+### ROC CURVE ###
+y_cv <- fitLD$pred$obs
+yhat_cv <- fitLD$pred$late
+rocCurve <- roc(y_cv, yhat_cv)
 plot(rocCurve, main = "ROC Predicting Flight Delay")
+print(rocCurve)
 ```
 
 
@@ -72,20 +85,21 @@ Using the `caret` and `rpart` packages, create a **classification** model for fl
 
 Show and describe all work
 
-# ARTICULATION OF THE PROBLEM:
+
+ARTICULATION OF THE PROBLEM:
 We are trying to predict if a flight will be late or not. Classification tree
 splits the predictors at intelligent places so that at any end node of the
 decision tree you can determine if the flight is late or not.
 
+DISCUSSION OF THE MODEL:
+The algo determined that the only predictor it would split was departure delay.
+This is exactly what I did for the naive model. The accuracy results were
+about the same. Overall, I do not think a CART is appropriate for this dataset
+as there is not much improvement over the naive model.
+
 ```{r rpart model}
 
-#NAIVE MODEL:
-# if flight dep_delay is >20 min, then arrival delay will be <20 min
-
-
-
-
-# USE OF CARET/RPART TO TRAIN MODEL
+### USE OF CARET/RPART TO TRAIN MODEL ###
 ctrlCART <- trainControl(method = "cv", number = 10,
                          savePredictions = TRUE,
                          classProbs = TRUE)
@@ -93,23 +107,39 @@ fitCART <- train(form, data = yx,
                 method = "rpart",
                 trControl = ctrlCART)
 
-# 10 FOLD CROSS VALIDATION GIVES UNBIASED PERF. METRIC. ACCURACY GIVEN BELOW
-summary(fitCART)
+### NAIVE MODEL ###
+# if flight dep_delay is >20 min, then arrival delay will be >20 min (defined late)
+y_naive <- yx$late
+yhat_naive <- rep(0, y_naive %>% length())
+yhat_naive <- ifelse(yx$dep_delay>20, "late", "notLate")
+accuracy_naive <- sum(y_naive == yhat_naive)/length(y_naive)
+print(paste("Accuracy of naive model: ", accuracy_naive %>% round(4)))
+
+### UNBIASED PERFORMANCE METRIC ###
+# uses 10 fold cross validation
+accuracy_cart <- fitCART$results$Accuracy[2]
+print(paste("Accuracy of CART model: ", accuracy_cart %>% round(4)))
+
+### PLOT OF THE MODEL ###
+fitCARTfinalModel <- fitCART$finalModel
+rpart.plot(fitCARTfinalModel, type = 3, extra = 0,
+           main = "tree for late flight prediction")
 
 ```
-
-```{r plot, fig.height=10, fig.width=19}
-
-# PLOT OF THE MODEL
-plot(fitCART$finalModel)
-text(fitCART$finalModel, cex = 5)
-
-```
-
-DISCUSSION OF MODEL:
-
 
 
 ### Questions:
 - Discuss the difference between the models and why you would use one model over the other?
-- How might you produce an ROC type curve for the *rpart* model? 
+
+Use classification model if your predictors have binomial or other clustered distributions.
+That way, the CART algo will have an easier time finding places to split. Use logistic
+regression if your predictors are normally distributed.
+
+
+- How might you produce an ROC type curve for the *rpart* model?
+
+The ROC "curve" will be only a point on the sensitivity/selectivity graph because the
+predictors are discrete. So you will have a only two values for selectivity/sensitivity 
+of the model. You could connect these points to the (0,1) and (1,0) points to get your
+"curve". Then find area under curve like normal and you have a metric for comparing
+the goodness of different models.
