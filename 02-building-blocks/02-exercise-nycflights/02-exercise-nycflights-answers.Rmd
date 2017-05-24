@@ -183,7 +183,7 @@ YX %<>% merge( weatherDT, all.x = TRUE, by=c('origin','year','month','day','hour
 YX %<>% merge( airportsDT, all.x = TRUE, by.x='origin', by.y='faa', suffixes=c('','.orig') )
 YX %<>% merge( airportsDT, all.x = TRUE, by.x='dest', by.y='faa', suffixes=c('','.dest') )
 
-
+saveRDS(YX, file = "YX.rds")
 
 ```
 

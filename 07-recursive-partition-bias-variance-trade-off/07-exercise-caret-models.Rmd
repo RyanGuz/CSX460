@@ -1,0 +1,125 @@
+---
+title: "Improving Model Performance / Tuning Parameters"
+author: "Ryan Guzalowski"
+date: "5/21/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(data.table)
+library(caret)
+```
+## Import/Setup
+```{r}
+
+# data import
+YX <- readRDS("YX.rds")
+YX <- YX[ , late := factor(ifelse(arr_delay >= 15, "late", "notLate")) ]
+
+# reducing size bc computer can't handle entire matrix
+predictors <- c("dep_delay", "month", "air_time", "distance", "carrier", "lat.dest", "lon.dest")
+response <- c("late")
+yx <- subset(YX, select = c(response, predictors)) %>% sample_n(1000)
+yx <- yx[!is.na(yx$late), ]
+
+
+# 10 fold cross validation with 3 repeats
+rsSpec <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+
+form <- late ~ .
+
+```
+
+## Tuning Parameter
+
+Generically and regardless of model type, what are the purposes of a model
+tuning parameters?
+
+## Caret Models
+
+This assignment demonstrates the use of caret for constructing models. Each
+model should be built and compared using using `Kappa` as the performance
+metric calculated using 10-fold repeated cross-validation with 3 folds.
+
+Using the rectangular data that you created for the NYCFlights to create a model
+for arr_delay >= 15 minutes.
+
+- glm
+- rpart
+- knn
+- C50
+- randomForest
+- adaBoost
+- Two methods of your choice from the Caret Model List (you will need to install any dependencies)
+
+Save the caret objects with the names provided.
+
+```{r}
+
+models <- c("GLM", "rpart", "knn", "C50", "randomForest", "adaBoost", "glmBoost", "extremeLearning")
+kappas <- rep(0, models %>% length)
+results <- data.table(models, kappas)
+colnames(results) <- c("Model", "Kappa")
+
+# glm
+fit.glm <- train(form, data = yx,
+                method = "glm", family = "binomial",
+                trControl = rsSpec, na.action = na.omit)
+results[1, 2] <- fit.glm$results$Kappa %>% round(4)
+
+# rpart
+fit.rpart <- train(form, data = yx,
+                  method = "rpart",
+                  trControl = rsSpec, na.action = na.omit)
+results[2, 2] <- fit.rpart$results$Kappa %>% max()
+
+# knn
+fit.knn <- train(form, data = yx,
+                method = "knn",
+                trControl = rsSpec, na.action = na.omit)
+results[3, 2] <- fit.knn$results$Kappa %>% max
+
+# C5.0
+fit.c50 <- train(form, data = yx,
+                method = "C5.0",
+                trControl = rsSpec, na.action = na.omit)
+results[4, 2] <- fit.c50$results$Kappa %>% max
+
+# randomForest
+fit.rf <- train(form, data = yx,
+               method = "rf",
+               trContrl = rsSpec, na.action = na.omit)
+results[5,2] <- fit.rf$results$Kappa %>% max
+
+# adaBoost
+# could not resample this one, it already takes ~5 min to run one fit
+fit.ada <- train(form, data = yx,
+                 method = "AdaBag",
+                 na.action = na.omit)
+results[6,2] <- fit.ada$results$Kappa %>% max
+
+# Boosted Generalize Linear Model
+
+fit.bglm <- train(form, data = yx,
+                 method = "glmboost",
+                 trControl = rsSpec, na.action = na.omit)
+results[7,2] <- fit.bglm$results$Kappa %>% max
+
+# Extreme Learning Machine
+
+fit.elm <- train(form, data = yx,
+                method = "elm",
+                trControl = rsSpec, na.action = na.omit)
+results[8,2] <- fit.elm$results$Kappa %>% max
+
+```
+
+Compare the  models?
+
+Which is best?  Why?
+
+```{r}
+
+```
