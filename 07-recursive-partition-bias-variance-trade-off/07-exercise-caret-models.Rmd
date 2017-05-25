@@ -11,6 +11,7 @@ library(dplyr)
 library(data.table)
 library(caret)
 ```
+
 ## Import/Setup
 ```{r}
 
@@ -24,10 +25,10 @@ response <- c("late")
 yx <- subset(YX, select = c(response, predictors)) %>% sample_n(1000)
 yx <- yx[!is.na(yx$late), ]
 
-
 # 10 fold cross validation with 3 repeats
 rsSpec <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
 
+# equation form
 form <- late ~ .
 
 ```
@@ -36,6 +37,9 @@ form <- late ~ .
 
 Generically and regardless of model type, what are the purposes of a model
 tuning parameters?
+
+Tuning parameters are model parameters that can't be calculated from the data. You have to run the model multiple times with different tuning parameters to see what gives you the best result. It cannot be done before or during. A common tuning parameter is the number of iterations a model does (such as in boosting, the # of models it will average). You have to look at the result and see when you start getting diminishing returns on your predictive power vs # of models averaged in the full boosted model.
+
 
 ## Caret Models
 
@@ -63,34 +67,42 @@ kappas <- rep(0, models %>% length)
 results <- data.table(models, kappas)
 colnames(results) <- c("Model", "Kappa")
 
+runFits = "no"
+
+if(runFits == "yes") {
 # glm
 fit.glm <- train(form, data = yx,
                 method = "glm", family = "binomial",
                 trControl = rsSpec, na.action = na.omit)
+print("Fitting glm...")
 results[1, 2] <- fit.glm$results$Kappa %>% round(4)
 
 # rpart
 fit.rpart <- train(form, data = yx,
                   method = "rpart",
                   trControl = rsSpec, na.action = na.omit)
+print("Fitting rpart...")
 results[2, 2] <- fit.rpart$results$Kappa %>% max()
 
 # knn
 fit.knn <- train(form, data = yx,
                 method = "knn",
                 trControl = rsSpec, na.action = na.omit)
+print("Fitting knn...")
 results[3, 2] <- fit.knn$results$Kappa %>% max
 
 # C5.0
 fit.c50 <- train(form, data = yx,
                 method = "C5.0",
                 trControl = rsSpec, na.action = na.omit)
+print("Fitting c5.0...")
 results[4, 2] <- fit.c50$results$Kappa %>% max
 
 # randomForest
 fit.rf <- train(form, data = yx,
                method = "rf",
                trContrl = rsSpec, na.action = na.omit)
+print("Fitting random forest...")
 results[5,2] <- fit.rf$results$Kappa %>% max
 
 # adaBoost
@@ -98,28 +110,42 @@ results[5,2] <- fit.rf$results$Kappa %>% max
 fit.ada <- train(form, data = yx,
                  method = "AdaBag",
                  na.action = na.omit)
+print("Fitting adaBoost...")
 results[6,2] <- fit.ada$results$Kappa %>% max
 
 # Boosted Generalize Linear Model
-
 fit.bglm <- train(form, data = yx,
                  method = "glmboost",
                  trControl = rsSpec, na.action = na.omit)
+print("Fitting boosted glm...")
 results[7,2] <- fit.bglm$results$Kappa %>% max
 
 # Extreme Learning Machine
-
 fit.elm <- train(form, data = yx,
                 method = "elm",
                 trControl = rsSpec, na.action = na.omit)
+print("Fitting extreme learning machine...")
 results[8,2] <- fit.elm$results$Kappa %>% max
 
+saveRDS(fits, file = "fits.rds")
+saveRDS(results, file = "fitResults.rds")
+} else{
+results <- readRDS(file = "fitResults.rds")
+}
+
+print(results)
 ```
 
 Compare the  models?
 
 Which is best?  Why?
 
-```{r}
+GLM: the best model. I think that it is easier for less important variables to contribute in this model. I know for sure rpart and RF brush these variables aside, and I think the boosting algo gets all its predictive power from dep_delay and ignores the rest.
 
-```
+rpart: model's kappa is below randomForest and adaBoost, which is the expected result.
+
+Random Forest: In an RF model, predictors are bagged at every tree split. I believe that since we have one very strong predictor (dep_delay), the RF model deemphasizes this variable because in some models the first split will not be dep_delay (since it was was not an availible predictor for that split). And as we've learned, the first split is very important in a tree model.
+
+adaBoost: this model takes forever to run and barely outperforms the RF model. I have a feeling all its doing the dep_delay is the "weak model", and all its doing is splitting it at different points for each model. So the full thing will just be an average of different splits of dep_delay. Basically no better than rpart (and we see that the kappas are very similar)
+
+GLM boost: Not sure why regular GLM outperforms this one.
