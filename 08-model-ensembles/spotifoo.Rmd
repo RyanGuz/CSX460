@@ -1,7 +1,7 @@
 ---
 title: "Customer Lifetime Value"
-author: "Christopher Brown"
-date: "May 2, 2016"
+author: "Ryan Guzalowski"
+date: "June 6, 2016"
 output: html_document
 ---
 
@@ -27,4 +27,56 @@ For each management question, describe your process. In particular, describe:
 
 # Who Are *Spotifoo*'s best customers?
 
+### Response:
+
+I would define best customers as those who spend the most per month. To figure this out I would first add up the total amount the customer has spent (monthly subscription and all other products puchaced), and divide that by the total number of months they have been a member.
+
+So y = (Total amount spent)/(number of months of membership)
+
+I would then classify y into two catagories: "best customer" and "not best customer". The top 20% of y I would consider a "best customer", and the rest not.
+
+### Predictors:
+
+I would include all the user attributes possible. For demographics: age, location, bank. On location, I would join with a table that has location information like average income and population density. If they connect their account to social media, I would also pull more information from there like what they list as their favorite media, number of friends, school, type of workplace they are employed in.
+
+I would also include listening history including: hours listened, top 3 genras listened to, interactivity measures with the app (how often are they utilizing "you may also like", or pre made playlists), and interactivity with social media (are their friends sending them suggestions over the app, do they regularly share with others?)
+
+### Errors:
+
+I would first build a naive model, which would just be: if the customer is in the top 20% of listeners, they are a best customer. Since I have turned this into a binary classification model, I would then compare the confusion matrix of the naive model to the confusion matrix generated with the full model.
+
+### Training/ test data set:
+
+YX would have a column for the response, and would be the length of the total number of users. For each user then, all predictors listed above would be included. Location data would be joined to each user from a seperate table.
+
+I train on the entire dataset and bootstrap to test the data and get an unbiased error estimate.
+
+### Type of model:
+
+I would try to build a logistic regression model and a tree. Then I would try bagging/boosting the tree if better performance is needed.
+
 # Customer Lifetime Value
+
+### Response:
+
+I think this would the more difficult of the two questions to answer. I would define "customer lifetime value" as the total amount of money the customer has spent over their subscription. We would have less observations as the previous model, because in YX we could only include users that have terminated their subscription.
+
+### Predictors:
+
+So YX consists of the response being the total $ spent by a customer over their entire subscription. The number of rows would be the number of customers who have created and then later terminated their subscription.
+
+I would use the same predictors as before, but I would include purchase history as well. So average total amount of money spent per month for each user, top 3 most purchaced genras, type of media purchaced.
+
+### Errors:
+
+For the naive model, I would just use the average customer lifetime value (CLV). So out of all users that created and ended a spotifoo subscription, how much did they on average spend. The difference between this and the actual CLV would be the errors for naive model.
+
+Whatever CLV the final model generates would be compared to actual CLV for that user to generate errors for the final model.
+
+### Training/test data set:
+
+As mentioned before, rows in YX would be users that have created and ended a spotify subscription. I would train on this whole dataset and then bootstrap for to generate an unbiased error measure.
+
+### Type of model:
+
+I would first try a simple linear model. If more performance is needed, I would try the the model that generates simple trees, then fits linear models on the leafs. 

@@ -79,8 +79,8 @@ results[1, 2] <- fit.glm$results$Kappa %>% round(4)
 
 # rpart
 fit.rpart <- train(form, data = yx,
-                  method = "rpart",
-                  trControl = rsSpec, na.action = na.omit)
+                  method = "rpart", na.action = na.rpart,
+                  trControl = rsSpec)
 print("Fitting rpart...")
 results[2, 2] <- fit.rpart$results$Kappa %>% max()
 
